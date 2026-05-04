@@ -7,6 +7,7 @@ extern "C" {
     float get_energy(const char* path);
     int get_period(const char*);
     int get_beats(const char*, float*, int);
+    int get_features(const char* file_path, char* out_json, int max_len);
     #include <libavutil/avutil.h>
     #include <libavutil/log.h>
 }
@@ -25,23 +26,13 @@ int main() {
         return 1;
     }
 
-    float bpm = get_bpm(file.c_str());
-    float energy = get_energy(file.c_str());
-    int period = get_period(file.c_str());
-    
-    const int MAX_BEATS = 1000;
-    float beats[MAX_BEATS];
-
-    int beatCount = get_beats(file.c_str(), beats, MAX_BEATS);
-
-    cout << "BPM: " << bpm << endl;
-    cout << "Energy: " << energy << endl;
-    cout << "Period: " << period << endl;
-
-    cout << "Beats (" << beatCount << "):" << endl;
-
-    for (int i = 0; i < beatCount && i < 20; i++) {
-        cout << beats[i] << endl;
+    char json_buf[10000];
+    int len = get_features(file.c_str(), json_buf, 10000);
+    cout << len;
+    if (len > 0) {
+        cout << "Features JSON:\n" << json_buf << endl;
+    } else {
+        cout << "Error generating features JSON" << endl;
     }
 
     return 0;

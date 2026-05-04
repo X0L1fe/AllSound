@@ -4,27 +4,55 @@ using namespace std;
 // Пример структуры нейросетевой модели (ONNX/Libtorch)
 // Real implementation would load модель и выполнять инференс.
 
-// Детектирование битов на основе онсетов (можно улучшить через ML)
-vector<float> detect_beats(const AudioBuffer& buffer) {
-    vector<float> beats;
-    // 1. Вычисляем онсеты (используя compute_onset_envelope)
-    // 2. Шарпим и нормализуем (как делали ранее)
-    // 3. Пиковая детекция (порог + поиск локальных максимумов)
-    // 4. Переводим индексы фреймов в секунды:
-    //    time = index * hop / sampleRate
-    return beats;
+// Детектирование даунбитов через ML-модель
+
+// --- ВСПОМОГАТЕЛЬНАЯ ---
+static float get_onset_value(const vector<float>& onset, int idx) {
+    if (idx < 0 || idx >= (int)onset.size()) return 0;
+    return onset[idx];
 }
 
-// Детектирование даунбитов через ML-модель
-vector<float> detect_downbeats(const AudioBuffer& buffer) {
+// --- DOWNBEAT DETECTION ---
+vector<float> detect_downbeats(
+    const vector<float>& beats,
+    const vector<float>& onset,
+    int sampleRate,
+    int hop
+) {
     vector<float> downbeats;
-    vector<float> confidences;
-    // 1. Подготавливаем входные признаки: STFT/мел-спектрограмма
-    // 2. Запускаем CRNN-модель (можно через ONNX Runtime или TensorFlow C API)
-    // 3. Получаем активации вероятностей даунбита
-    // 4. Применяем Viterbi или Monte Carlo с учётом 4/4
-    // 5. Сохраняем времена (в сек) всех обнаруженных даунбитов
-    // 6. Заполняем в features.downbeat_confidence
+
+    if (beats.size() < 4) return downbeats;
+
+    // перевод beats → frame index
+    vector<int> beatFrames;
+    for (float t : beats) {
+        int frame = (int)(t * sampleRate / hop);
+        beatFrames.push_back(frame);
+    }
+
+    // ищем фазу такта (0..3)
+    float bestScore = 0;
+    int bestOffset = 0;
+
+    for (int offset = 0; offset < 4; offset++) {
+
+        float score = 0;
+
+        for (size_t i = offset; i < beatFrames.size(); i += 4) {
+            score += get_onset_value(onset, beatFrames[i]);
+        }
+
+        if (score > bestScore) {
+            bestScore = score;
+            bestOffset = offset;
+        }
+    }
+
+    // собираем downbeats
+    for (size_t i = bestOffset; i < beats.size(); i += 4) {
+        downbeats.push_back(beats[i]);
+    }
+
     return downbeats;
 }
 
@@ -37,10 +65,54 @@ vector<int> detect_bars(const vector<float>& downbeats) {
 }
 
 // Фрагмент функции распознавания фраз (простой: каждые 4 такта)
-vector<int> detect_phrases(const vector<int>& bar_index) {
-    vector<int> phrases(bar_index.size());
-    for (size_t i = 0; i < bar_index.size(); ++i) {
-        phrases[i] = bar_index[i] / 4; // каждые 4 такта = новая фраза
+vector<int> detect_phrases(
+    const vector<float>& downbeats,
+    const vector<float>& onset,
+    int sampleRate,
+    int hop
+) {
+    vector<int> phrases;
+
+    if (downbeats.size() < 8) return phrases;
+
+    // перевод в frame
+    vector<int> dbFrames;
+    for (float t : downbeats) {
+        dbFrames.push_back((int)(t * sampleRate / hop));
     }
-    return phrases;
+
+    // считаем энергию по барам
+    vector<float> barEnergy;
+
+    for (size_t i = 0; i + 1 < dbFrames.size(); i++) {
+        float sum = 0;
+
+        for (int f = dbFrames[i]; f < dbFrames[i+1]; f++) {
+            if (f >= 0 && f < onset.size()) {
+                sum += onset[f];
+            }
+        }
+
+        barEnergy.push_back(sum);
+    }
+
+    // ищем пики изменения энергии
+    vector<int> phraseIndex(barEnergy.size());
+
+    int currentPhrase = 0;
+    phraseIndex[0] = 0;
+
+    for (size_t i = 1; i < barEnergy.size(); i++) {
+
+        float diff = fabs(barEnergy[i] - barEnergy[i-1]);
+
+        // ключевая эвристика
+        if (diff > 0.3f) {  // можно тюнить
+            currentPhrase++;
+        }
+
+        phraseIndex[i] = currentPhrase;
+    }
+
+    return phraseIndex;
 }

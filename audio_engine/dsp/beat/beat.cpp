@@ -82,3 +82,38 @@ vector<float> build_beat_grid(
 
     return beats;
 }
+
+vector<float> refine_beats_with_onset(
+    const vector<float>& beats,
+    const vector<float>& onset,
+    int sampleRate,
+    int hop
+) {
+    vector<float> refined;
+
+    int searchWindow = 5; // ±5 фреймов
+
+    for (float t : beats) {
+
+        int frame = (int)(t * sampleRate / hop);
+
+        float bestVal = 0;
+        int bestFrame = frame;
+
+        for (int offset = -searchWindow; offset <= searchWindow; offset++) {
+            int f = frame + offset;
+
+            if (f < 0 || f >= (int)onset.size()) continue;
+
+            if (onset[f] > bestVal) {
+                bestVal = onset[f];
+                bestFrame = f;
+            }
+        }
+
+        float refinedTime = (float)bestFrame * hop / sampleRate;
+        refined.push_back(refinedTime);
+    }
+
+    return refined;
+}
