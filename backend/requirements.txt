@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+librosa
+numpy
+soundfile
+musicbrainzngs
+requests
+# Опционально: openai для LLM, но в пример не включено

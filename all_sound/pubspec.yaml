@@ -1,0 +1,28 @@
+name: all_sound
+description: AI-музыкальный плеер с интеллектуальным анализом
+publish_to: 'none'
+version: 1.0.0+1
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+# Аудио воспроизведение
+  path_provider: ^2.1.0
+  audio_metadata_reader: ^1.4.2
+  just_audio: ^0.9.46 # Чтение ID3 тегов
+  file_picker: ^8.0.0
+  
+  http: ^0.13.4 # HTTP клиент
+  permission_handler: ^11.0.0
+  # Onnx Runtime (если используется локальный инференс)
+  # onnxruntime: ^1.4.1
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true

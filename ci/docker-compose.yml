@@ -1,0 +1,10 @@
+version: '3'
+services:
+  backend:
+    build: ../backend
+    volumes:
+      - ../backend/data:/app/data
+    ports:
+      - "8000:8000"
+  # (опционально) сервисы ML или база данных
+

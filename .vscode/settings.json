@@ -1,0 +1,5 @@
+{
+    "C_Cpp.errorSquiggles": "enabled",
+    "cmake.sourceDirectory": "D:/Projects/AllSound/audio_engine",
+    "cmake.buildDirectory": "${workspaceFolder}/audio_engine/build"
+}
